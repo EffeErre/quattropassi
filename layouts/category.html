@@ -1,0 +1,21 @@
+<%= render "head", :title => @item[:title] %>
+    <article>
+      <header>
+        <h1><%= @item[:title] %></h1>
+      </header>
+      <%= yield %>
+    </article>
+    <h2>Articoli in <%= @item.path.gsub(/\//,"") %></h2>
+      <% articles_in_category(@item.path.gsub(/\//,"")).each do |a| %>
+<div class="post">
+  <h2 class="title"><%= link_to(a[:title], a)%></h2>
+  <p class="meta"><span class="date"><%= attribute_to_time(a[:created_at]).date %></span><span class="posted">Posted by <a href="#">Someone</a></span></p>
+  <div style="clear: both;">&nbsp;</div>
+  <div class="entry">
+    <%= a.compiled_content.first_par %>
+    <p class="links"><%= link_to('Continua a leggere', a)%>&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;<a href="#">Commenti</a></p>
+  </div>
+</div>
+      <% end %>
+<%= render "sidebar" %>
+<%= render "foot" %>

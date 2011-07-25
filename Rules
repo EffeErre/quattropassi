@@ -1,0 +1,81 @@
+#!/usr/bin/env ruby
+
+# A few helpful tips about the Rules file:
+#
+# * The order of rules is important: for each item, only the first matching
+#   rule is applied.
+#
+# * Item identifiers start and end with a slash (e.g. "/about/" for the file
+#   "content/about.html"). To select all children, grandchildren, ... of an
+#   item, use the pattern "/about/*/"; "/about/*" will also select the parent,
+#   because "*" matches zero or more characters.
+
+preprocess do
+  require "nokogiri"
+
+  articles.each do |a|
+    a[:category] = /\/(.+)\/.+\//.match(a.identifier)[1]
+  end
+  lyxs = items.select {|i| i[:extension] == "lyx"}
+  lyxs.each do |a|
+    system "lyx -e xhtml #{a[:filename]}"
+    source = a[:filename].gsub(/\.lyx/,".xhtml")
+    a[:doc] = Nokogiri::HTML(File.open source)
+    system "rm #{source}"
+
+    a[:title] = a[:doc].css(".title").unlink.text.gsub(/^\n/,"")
+    a[:kind] = "article"
+    a[:created_at] = a.mtime.strftime("%Y-%m-%dT%H:%M")
+    a[:category] = /\/(.+)\/.+\//.match(a.identifier)[1]
+  end
+end
+
+compile '/images/*/' do
+  # don't filter or layout
+end
+
+compile '/foto/*/' do
+  filter :resize
+end
+
+compile '/feed/' do
+  filter :erb
+end
+
+compile '/css/*/' do; end
+compile '/jquery/*/' do; end
+
+compile '*' do
+  case item[:extension]
+  when 'lyx'
+    filter :lyx
+  when 'md'
+    filter :erb
+    filter :maruku
+  else
+    filter :erb
+  end
+  case item[:kind]
+  when "article"
+    layout 'article'
+  when "category"
+    layout "category"
+  else
+    layout 'default'
+  end
+end
+
+route '/feed/' do
+  '/feed.xml'
+end
+
+# Mantiene nome e percorso di questi elementi
+route /(images|foto|jquery|css)\/.+\/$/ do
+  item.identifier.chop + "." + item[:extension]
+end
+
+route '*' do
+  item.identifier + 'index.html'
+end
+
+layout '*', :erb
